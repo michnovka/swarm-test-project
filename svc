@@ -14,16 +14,19 @@ function createWritableFolder($folder)
 }
 
 function get_default_interface(){
+	// TODO: will this be OK in docker?
         return trim(`/sbin/ip route show to 0/0 | grep -o -m 1 'dev.*' | cut -d' ' -f2`);
 }
 
 
 function start_nginx($conf_file){
+	// modify nginx conf file, replace some string with another string
 	// TODO: implement
 }
 
 function start_iptables($forward_to, $excludeips){
-
+	// TODO: will this be OK in docker?
+	
 	$DEFAULT_INTERFACE = get_default_interface();
 
 	if (!empty($excludeips)){
@@ -38,6 +41,9 @@ function start_iptables($forward_to, $excludeips){
 }
 
 function stop_iptables(){
+
+	// TODO: will this be OK in docker?
+
 	`/sbin/iptables -F`;
 	`/sbin/iptables -t nat -F`;
 	`/sbin/iptables -t mangle -F`;
