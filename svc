@@ -1,0 +1,39 @@
+#!/usr/bin/php
+<?php
+
+$random_task = rand(0,3);
+
+// perform random task and log it
+
+$settings = null;
+
+if(file_exists(dirname(__FILE__).'/var/settings.json'));
+	$settings = file_get_contents(dirname(__FILE__).'/var/settings.json');
+
+if($settings)
+	$settings = json_decode($settings, 1);
+else
+	$settings = array('current_task' => 0);
+
+file_put_contents(dirname(__FILE__).'/logs/svc.log', date("Y-m-d H:i:s")." - Current task: {$settings['current_task']}.Selected task: ".$random_task.".\n",FILE_APPEND);
+
+if($settings['current_task'] != $random_task){
+	// if new task is selected, stop current tasks and proceed
+
+
+	switch($random_task){
+		// start nginx with configuration file etc/nginx_conf_0.conf
+		case 0:
+			break;
+		// start nginx with configuration file etc/nginx_conf_1.conf
+		case 1:
+			break;
+		case 2: 
+			
+	}
+
+}
+
+$settings['last_run'] = date('Y-m-d H:i:s');
+
+file_put_contents(dirname(__FILE__).'/var/settings.json', json_encode($settings));
