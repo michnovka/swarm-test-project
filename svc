@@ -47,43 +47,71 @@ function stop_nginx(){
 	// todo: implement
 }
 
+function getSettings(){
+
+	$settings = null;
+
+	if(file_exists(dirname(__FILE__).'/var/settings.json'));
+		$settings = file_get_contents(dirname(__FILE__).'/var/settings.json');
+
+	if($settings)
+		$settings = json_decode($settings, 1);
+	else
+		$settings = array('current_task' => 0);
+
+	return $settings;
+}
+
+function saveSettings($settings){
+	file_put_contents(dirname(__FILE__).'/var/settings.json', json_encode($settings));
+}
+
 // ------------------------------------------------------------
 
-createWritableFolder('./var');
-createWritableFolder('./logs');
 
-$random_task = rand(0,3);
+function run_cron(){
 
-// perform random task and log it
+	$settings = getSettings();
 
-$settings = null;
+	// this simulates fetching of what to do from API
+	$random_task = rand(0,3);
 
-if(file_exists(dirname(__FILE__).'/var/settings.json'));
-	$settings = file_get_contents(dirname(__FILE__).'/var/settings.json');
+	// perform random task and log it
+	file_put_contents(dirname(__FILE__).'/logs/svc.log', date("Y-m-d H:i:s")." - Current task: {$settings['current_task']}.Selected task: ".$random_task.".\n",FILE_APPEND);
 
-if($settings)
-	$settings = json_decode($settings, 1);
-else
-	$settings = array('current_task' => 0);
+	if($settings['current_task'] != $random_task){
+		// if new task is selected, stop current tasks and proceed
 
-file_put_contents(dirname(__FILE__).'/logs/svc.log', date("Y-m-d H:i:s")." - Current task: {$settings['current_task']}.Selected task: ".$random_task.".\n",FILE_APPEND);
+		// first stop everything
+		stop();
 
-if($settings['current_task'] != $random_task){
-	// if new task is selected, stop current tasks and proceed
+		$settings['current_task'] = $random_task;
+		saveSettings($settings);
 
-	// first stop everything
+		start();
+	}
+
+	$settings['last_cron_run'] = date('Y-m-d H:i:s');
+	saveSettings($settings);
+}
+
+function stop(){
 	stop_iptables();
 	stop_nginx();
+}
 
-	switch($random_task){
+function start(){
+	$settings = getSettings();
+
+	switch($settings['current_task']){
 		// start nginx with configuration file etc/nginx_conf_0.conf
 		case 0:
-			start_nginx('etc/nginx_conf_0.conf);
+			start_nginx('etc/nginx_conf_0.conf');
 			break;
 
 		// start nginx with configuration file etc/nginx_conf_1.conf
 		case 1:
-			start_nginx('etc/nginx_conf_1.conf);
+			start_nginx('etc/nginx_conf_1.conf');
 			break;
 
 		// perform some iptable rules
@@ -98,6 +126,23 @@ if($settings['current_task'] != $random_task){
 
 }
 
-$settings['last_run'] = date('Y-m-d H:i:s');
+// ----------------------------
 
-file_put_contents(dirname(__FILE__).'/var/settings.json', json_encode($settings));
+createWritableFolder('./var');
+createWritableFolder('./logs');
+
+
+switch(@$argv[1]) {
+	case 'cron':
+		run_cron();
+		break;
+	case 'start':
+		start();
+		break;
+	case 'info':
+		print_r(getSettings());
+		echo "\n";
+		break;
+	default:
+		echo "Usage: svc cron|start|stop\n";
+}
