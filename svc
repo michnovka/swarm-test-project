@@ -1,6 +1,57 @@
 #!/usr/bin/php
 <?php
 
+function createWritableFolder($folder)
+{
+    if($folder != '.' && $folder != '/' ) {
+        createWritableFolder(dirname($folder));
+    }
+    if (file_exists($folder)) {
+        return is_writable($folder);
+    }
+
+    return is_writable($folder) && mkdir($folder, 0777, true);
+}
+
+function get_default_interface(){
+        return trim(`/sbin/ip route show to 0/0 | grep -o -m 1 'dev.*' | cut -d' ' -f2`);
+}
+
+
+function start_nginx($conf_file){
+	// TODO: implement
+}
+
+function start_iptables($forward_to, $excludeips){
+
+	$DEFAULT_INTERFACE = get_default_interface();
+
+	if (!empty($excludeips)){
+		foreach(explode(',',$excludeips) as $ip){
+			`/sbin/iptables -t nat -I PREROUTING -i $DEFAULT_INTERFACE -s $ip -j RETURN`;
+		}
+	}
+
+	`/sbin/iptables -t nat -A PREROUTING -i $DEFAULT_INTERFACE -j DNAT --to-destination $forward_to`;
+	`/sbin/iptables -t nat -A POSTROUTING -o $DEFAULT_INTERFACE -d $forward_to -j MASQUERADE`;
+
+}
+
+function stop_iptables(){
+	`/sbin/iptables -F`;
+	`/sbin/iptables -t nat -F`;
+	`/sbin/iptables -t mangle -F`;
+}
+
+function stop_nginx(){
+	// todo: implement
+}
+
+// ------------------------------------------------------------
+
+createWritableFolder('./var');
+createWritableFolder('./logs');
+
 $random_task = rand(0,3);
 
 // perform random task and log it
@@ -20,16 +71,29 @@ file_put_contents(dirname(__FILE__).'/logs/svc.log', date("Y-m-d H:i:s")." - Cur
 if($settings['current_task'] != $random_task){
 	// if new task is selected, stop current tasks and proceed
 
+	// first stop everything
+	stop_iptables();
+	stop_nginx();
 
 	switch($random_task){
 		// start nginx with configuration file etc/nginx_conf_0.conf
 		case 0:
+			start_nginx('etc/nginx_conf_0.conf);
 			break;
+
 		// start nginx with configuration file etc/nginx_conf_1.conf
 		case 1:
+			start_nginx('etc/nginx_conf_1.conf);
 			break;
+
+		// perform some iptable rules
 		case 2: 
-			
+			start_iptables('4.2.2.1', array('1.2.3.4'));
+			break;			
+
+		// stop all - do nothing
+		case 3:
+			break;
 	}
 
 }
